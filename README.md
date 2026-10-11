@@ -166,7 +166,6 @@ monitoring-site/
 - **No Secrets in Git:** All secrets and authentication credentials reside strictly in uncommitted environment variables.
 - **SSRF Hardening:** Private subnets, loopbacks, and RFC1918 IP addresses are validated and rejected before any TCP handshake is initiated.
 - **Protected Cookie Sessions:** Auth cookies use `httpOnly: true`, `sameSite: 'lax'`, and configurable max-age.
-- **Agent Skill Isolation:** Local assistant skills in `.agents/` are strictly ignored by `.gitignore` to keep the public repository clean and lean.
 
 ---
 

@@ -23,6 +23,7 @@ import { IncidentsLog } from '@/components/monitors/incidents-log';
 import { LiveCheckDrawer } from '@/components/monitors/live-check-drawer';
 import { NewMonitorModal } from '@/components/monitors/new-monitor-modal';
 import { DeleteMonitorModal } from '@/components/monitors/delete-monitor-modal';
+import { RefreshCw } from 'lucide-react';
 import { LoginView } from '@/components/auth/login-view';
 
 export default function DashboardPage() {
@@ -248,8 +249,8 @@ export default function DashboardPage() {
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="border-[5px] border-black bg-white p-8 font-headline text-lg uppercase tracking-wider animate-pulse">
-          [AUTHENTICATING SESSION...]
+        <div className="border-[5px] border-black bg-white p-8 flex items-center justify-center">
+          <RefreshCw className="w-10 h-10 text-black animate-spin stroke-[2.5]" aria-label="Loading..." />
         </div>
       </div>
     );
