@@ -269,11 +269,11 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2 mb-1">
             <span className="w-3 h-3 bg-black inline-block" />
             <h1 className="font-headline text-2xl md:text-3xl uppercase tracking-widest">
-              PULSEGUARD
+              MONITORING SITE
             </h1>
           </div>
           <div className="flex items-center gap-2 font-mono text-xs text-[#666666]">
-            <span>MONITORING WEBSITE METRICS</span>
+            <span>REAL-TIME SYNTHETIC UPTIME &amp; API RELIABILITY PLATFORM</span>
           </div>
         </div>
 

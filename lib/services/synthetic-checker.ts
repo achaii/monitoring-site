@@ -80,7 +80,7 @@ export async function checkWebsiteLive(targetUrl: string, timeoutMs = 8000): Pro
       {
         method: 'GET',
         headers: {
-          'User-Agent': 'PulseGuard-Synthetic-Monitor/1.0 (+https://pulseguard.local)',
+          'User-Agent': 'MonitoringSite-Synthetic-Monitor/1.0 (+https://monitoringsite.local)',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         },
         timeout: timeoutMs,

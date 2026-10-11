@@ -1,4 +1,4 @@
-# PULSEGUARD // WEBSITE & API SYNTHETIC MONITOR
+# MONITORING SITE // REAL-TIME SYNTHETIC UPTIME & API RELIABILITY PLATFORM
 
 A high-performance Website and API Synthetic Monitoring Platform built with Next.js 16 (App Router), TypeScript, and Tailwind CSS. Designed in accordance with the **RawBlock Brutalist Design System** (0px border-radius, zero box-shadows, 3px/5px high-contrast solid borders, Archivo Black, Work Sans, and Space Mono typography).
 
@@ -30,7 +30,7 @@ A high-performance Website and API Synthetic Monitoring Platform built with Next
 
 ## Authentication & Environment Variables
 
-PulseGuard enforces a **Zero-Leak Security Policy**: administrative credentials are never committed to Git. Instead, they are resolved via server-side environment variables.
+Monitoring Site enforces a **Zero-Leak Security Policy**: administrative credentials are never committed to Git. Instead, they are resolved via server-side environment variables.
 
 ### Environment Variable Names
 
@@ -91,7 +91,7 @@ npm run start
 
 ## Deploying to Vercel
 
-PulseGuard is optimized for seamless zero-configuration deployment on Vercel:
+Monitoring Site is optimized for seamless zero-configuration deployment on Vercel:
 
 1. **Push your code to GitHub:**
    ```bash
@@ -172,4 +172,4 @@ monitoring-site/
 
 ## License
 
-MIT © 2026 PulseGuard. Architected by [achaii](https://github.com/achaii).
+MIT © 2026 Monitoring Site. Architected by [achaii](https://github.com/achaii).

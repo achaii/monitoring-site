@@ -23,8 +23,8 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'PULSEGUARD // WEBSITE & API SYNTHETIC MONITOR',
-  description: 'RawBlock Brutalist Website & API Synthetic Monitoring Platform. Real-time latency waterfall, 90-day SLA history, SSL certificate intelligence, and global probe consensus.',
+  title: 'MONITORING SITE // REAL-TIME SYNTHETIC UPTIME & API RELIABILITY PLATFORM',
+  description: 'High-performance website and API synthetic monitoring platform. Real-time network latency waterfall, 90-day SLA reliability history, SSL certificate intelligence, and global multi-node consensus probing.',
 };
 
 export default function RootLayout({

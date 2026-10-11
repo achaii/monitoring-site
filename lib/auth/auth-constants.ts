@@ -7,5 +7,5 @@ export const AUTH_CREDENTIALS = {
   },
 };
 
-export const AUTH_COOKIE_NAME = 'pulseguard_session_v1';
-export const AUTH_STORAGE_KEY = 'pulseguard_authenticated_user';
+export const AUTH_COOKIE_NAME = 'monitoringsite_session_v1';
+export const AUTH_STORAGE_KEY = 'monitoringsite_authenticated_user';

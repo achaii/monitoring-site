@@ -53,11 +53,11 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
           <div className="flex items-center gap-2 mb-2">
             <span className="w-3.5 h-3.5 bg-black inline-block" />
             <h1 className="font-headline text-xl uppercase tracking-wider">
-              PULSEGUARD
+              MONITORING SITE
             </h1>
           </div>
           <p className="font-mono text-xs text-[#666666] uppercase">
-            WEBSITE MONITORING
+            REAL-TIME SYNTHETIC UPTIME &amp; API RELIABILITY PLATFORM
           </p>
         </div>
 
@@ -102,7 +102,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
       </div>
 
       <div className="mt-4 font-mono text-xs text-[#666666] uppercase">
-        WEBSITE MONITORING
+        REAL-TIME SYNTHETIC UPTIME &amp; API PERFORMANCE ENGINE
       </div>
     </div>
   );
