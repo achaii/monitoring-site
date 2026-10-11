@@ -1,8 +1,8 @@
 import { Monitor } from '@/types/monitor';
 import { initialMonitors } from '@/lib/data/mock-monitors';
 
-const STORAGE_KEY = 'monitoringsite_monitors_v1';
-const LEGACY_STORAGE_KEY = 'pulseguard_monitors_v1';
+const STORAGE_KEY = 'monitoringsite_monitors_v2';
+const MOCK_IDS = new Set(['mon-01', 'mon-02', 'mon-03', 'mon-04', 'mon-05']);
 
 export function getStoredMonitors(): Monitor[] {
   if (typeof window === 'undefined') {
@@ -10,14 +10,48 @@ export function getStoredMonitors(): Monitor[] {
   }
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      // Initialize seed monitors
+      // Check legacy v1 keys and filter out old mock monitors
+      const legacyRaw =
+        localStorage.getItem('monitoringsite_monitors_v1') ||
+        localStorage.getItem('pulseguard_monitors_v1');
+
+      if (legacyRaw) {
+        try {
+          const legacyParsed = JSON.parse(legacyRaw);
+          if (Array.isArray(legacyParsed)) {
+            // Keep only user-added monitors, remove old mock monitors
+            const customOnly = legacyParsed.filter((m: Monitor) => !MOCK_IDS.has(m.id));
+            if (customOnly.length > 0) {
+              const hasAdyatma = customOnly.some((m: Monitor) => m.url.includes('adyatma.com'));
+              const merged = hasAdyatma ? customOnly : [...initialMonitors, ...customOnly];
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+              return merged;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // Initialize with adyatma.com
       localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMonitors));
       return initialMonitors;
     }
+
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialMonitors;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Ensure mock monitors are filtered out if any remained
+      const cleaned = parsed.filter((m: Monitor) => !MOCK_IDS.has(m.id));
+      if (cleaned.length === 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMonitors));
+        return initialMonitors;
+      }
+      return cleaned;
+    }
+
+    return initialMonitors;
   } catch (err) {
     console.error('Failed to read monitors from storage:', err);
     return initialMonitors;

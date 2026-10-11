@@ -73,14 +73,65 @@ export default function DashboardPage() {
     checkAuthSession();
   }, []);
 
-  // Load persistent monitors from storage
+  // Helper to re-check a specific monitor live
+  const checkMonitorLive = async (targetMonitor: Monitor) => {
+    if (!targetMonitor.url || !targetMonitor.url.startsWith('http')) return;
+    try {
+      const res = await fetch('/api/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: targetMonitor.url }),
+      });
+      const data = await res.json();
+      if (res.ok && data && data.isUp !== undefined) {
+        setMonitors((prev) => {
+          const updated = prev.map((m) =>
+            m.id === targetMonitor.id
+              ? {
+                  ...m,
+                  status: (data.isUp ? 'UP' : 'DOWN') as Monitor['status'],
+                  httpStatusCode: data.statusCode || m.httpStatusCode,
+                  httpStatusText: data.statusText || m.httpStatusText,
+                  currentLatencyMs: data.latency?.totalTime || m.currentLatencyMs,
+                  waterfall: data.latency || m.waterfall,
+                  ssl: data.ssl || m.ssl,
+                  lastCheckTimestamp: new Date().toISOString(),
+                  resolvedIp: data.resolvedIp || m.resolvedIp,
+                  headers: data.headers || m.headers,
+                }
+              : m
+          );
+          saveStoredMonitors(updated);
+          return updated;
+        });
+      }
+    } catch {
+      // Ignore network errors
+    }
+  };
+
+  // Load persistent monitors from storage & run live check
   useEffect(() => {
     const loaded = getStoredMonitors();
     setMonitors(loaded);
     if (loaded.length > 0) {
       setSelectedMonitorId(loaded[0].id);
+      checkMonitorLive(loaded[0]);
     }
   }, []);
+
+  // Periodic live check every 60 seconds
+  useEffect(() => {
+    if (!selectedMonitorId) return;
+    const current = monitors.find((m) => m.id === selectedMonitorId);
+    if (!current || current.status === 'PAUSED') return;
+
+    const interval = setInterval(() => {
+      checkMonitorLive(current);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [selectedMonitorId, monitors]);
 
   // Active selected monitor
   const selectedMonitor = useMemo(() => {
@@ -180,6 +231,7 @@ export default function DashboardPage() {
     const updated = addStoredMonitor(created);
     setMonitors(updated);
     setSelectedMonitorId(id);
+    checkMonitorLive(created);
   };
 
   // Handle Delete Monitor
