@@ -4,11 +4,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Monitor, MonitorType } from '@/types/monitor';
 import { initialProbes, generate90DaysHistory } from '@/lib/data/mock-monitors';
 import {
-  getStoredMonitors,
-  saveStoredMonitors,
-  addStoredMonitor,
-  deleteStoredMonitor,
-} from '@/lib/storage/monitors-storage';
+  fetchMonitors,
+  saveMonitor,
+  deleteMonitor,
+} from '@/lib/services/monitors-api';
 import { AUTH_STORAGE_KEY } from '@/lib/auth/auth-constants';
 import { RawButton } from '@/components/ui/raw-button';
 import { RawBadge } from '@/components/ui/raw-badge';
@@ -36,6 +35,8 @@ export default function DashboardPage() {
   const [selectedMonitorId, setSelectedMonitorId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [isDbConnected, setIsDbConnected] = useState(false);
+  const [isLoadingMonitors, setIsLoadingMonitors] = useState(true);
 
   // 3. MODALS STATE
   const [isLiveCheckOpen, setIsLiveCheckOpen] = useState(false);
@@ -47,14 +48,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function checkAuthSession() {
       try {
-        // Cek cookie session via API
         const res = await fetch('/api/auth/me');
         const data = await res.json();
 
         if (data.authenticated) {
           setCurrentUser(data.username);
         } else {
-          // Fallback cek localStorage
           const localUser = localStorage.getItem(AUTH_STORAGE_KEY);
           if (localUser) {
             setCurrentUser(localUser);
@@ -84,40 +83,52 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (res.ok && data && data.isUp !== undefined) {
+        let toPersist: Monitor | null = null;
         setMonitors((prev) => {
-          const updated = prev.map((m) =>
-            m.id === targetMonitor.id
-              ? {
-                  ...m,
-                  status: (data.isUp ? 'UP' : (data.statusCode > 0 ? 'DOWN' : 'UP')) as Monitor['status'],
-                  httpStatusCode: data.statusCode > 0 ? data.statusCode : (m.httpStatusCode > 0 ? m.httpStatusCode : 200),
-                  httpStatusText: data.statusCode > 0 ? (data.statusText || 'OK') : (m.httpStatusText && m.httpStatusText !== 'CONNECTION_ERROR' ? m.httpStatusText : 'OK'),
-                  currentLatencyMs: data.latency?.totalTime && data.latency.totalTime > 0 ? data.latency.totalTime : m.currentLatencyMs,
-                  waterfall: data.latency || m.waterfall,
-                  ssl: data.ssl || m.ssl,
-                  lastCheckTimestamp: new Date().toISOString(),
-                  resolvedIp: data.resolvedIp || m.resolvedIp,
-                  headers: data.headers && Object.keys(data.headers).length > 0 ? data.headers : m.headers,
-                }
-              : m
-          );
-          saveStoredMonitors(updated);
+          const updated = prev.map((m) => {
+            if (m.id === targetMonitor.id) {
+              const patched = {
+                ...m,
+                status: (data.isUp ? 'UP' : (data.statusCode > 0 ? 'DOWN' : 'UP')) as Monitor['status'],
+                httpStatusCode: data.statusCode > 0 ? data.statusCode : (m.httpStatusCode > 0 ? m.httpStatusCode : 200),
+                httpStatusText: data.statusCode > 0 ? (data.statusText || 'OK') : (m.httpStatusText && m.httpStatusText !== 'CONNECTION_ERROR' ? m.httpStatusText : 'OK'),
+                currentLatencyMs: data.latency?.totalTime && data.latency.totalTime > 0 ? data.latency.totalTime : m.currentLatencyMs,
+                waterfall: data.latency || m.waterfall,
+                ssl: data.ssl || m.ssl,
+                lastCheckTimestamp: new Date().toISOString(),
+                resolvedIp: data.resolvedIp || m.resolvedIp,
+                headers: data.headers && Object.keys(data.headers).length > 0 ? data.headers : m.headers,
+              };
+              toPersist = patched;
+              return patched;
+            }
+            return m;
+          });
           return updated;
         });
+        if (toPersist) {
+          saveMonitor(toPersist);
+        }
       }
     } catch {
       // Ignore network errors
     }
   };
 
-  // Load persistent monitors from storage & run live check
+  // Load persistent monitors from server (Neon Postgres) & run initial live check
   useEffect(() => {
-    const loaded = getStoredMonitors();
-    setMonitors(loaded);
-    if (loaded.length > 0) {
-      setSelectedMonitorId(loaded[0].id);
-      checkMonitorLive(loaded[0]);
+    async function loadMonitors() {
+      setIsLoadingMonitors(true);
+      const res = await fetchMonitors();
+      if (res.monitors && res.monitors.length > 0) {
+        setMonitors(res.monitors);
+        setSelectedMonitorId(res.monitors[0].id);
+        checkMonitorLive(res.monitors[0]);
+      }
+      setIsDbConnected(res.isDbConnected);
+      setIsLoadingMonitors(false);
     }
+    loadMonitors();
   }, []);
 
   // Periodic live check every 60 seconds
@@ -180,7 +191,7 @@ export default function DashboardPage() {
   };
 
   // Handle Add Monitor
-  const handleAddMonitor = (newMon: {
+  const handleAddMonitor = async (newMon: {
     name: string;
     url: string;
     type: MonitorType;
@@ -228,22 +239,23 @@ export default function DashboardPage() {
       hostingProvider: 'Cloudflare / Anycast',
     };
 
-    const updated = addStoredMonitor(created);
-    setMonitors(updated);
+    setMonitors((prev) => [created, ...prev]);
     setSelectedMonitorId(id);
+    await saveMonitor(created);
     checkMonitorLive(created);
   };
 
   // Handle Delete Monitor
-  const handleConfirmDelete = (id: string) => {
-    const updated = deleteStoredMonitor(id);
-    setMonitors(updated);
+  const handleConfirmDelete = async (id: string) => {
+    setMonitors((prev) => prev.filter((m) => m.id !== id));
     setMonitorToDelete(null);
 
     // Update selected monitor
     if (selectedMonitorId === id) {
-      setSelectedMonitorId(updated.length > 0 ? updated[0].id : '');
+      const remaining = monitors.filter((m) => m.id !== id);
+      setSelectedMonitorId(remaining.length > 0 ? remaining[0].id : '');
     }
+    await deleteMonitor(id);
   };
 
   // Run Immediate Check on Selected
@@ -260,24 +272,30 @@ export default function DashboardPage() {
         });
         const data = await res.json();
         if (res.ok) {
-          const updated = monitors.map((m) =>
-            m.id === selectedMonitor.id
-              ? {
-                  ...m,
-                  status: (data.isUp ? 'UP' : (data.statusCode > 0 ? 'DOWN' : 'UP')) as Monitor['status'],
-                  httpStatusCode: data.statusCode > 0 ? data.statusCode : (m.httpStatusCode > 0 ? m.httpStatusCode : 200),
-                  httpStatusText: data.statusCode > 0 ? (data.statusText || 'OK') : (m.httpStatusText && m.httpStatusText !== 'CONNECTION_ERROR' ? m.httpStatusText : 'OK'),
-                  currentLatencyMs: data.latency?.totalTime && data.latency.totalTime > 0 ? data.latency.totalTime : m.currentLatencyMs,
-                  waterfall: data.latency || m.waterfall,
-                  ssl: data.ssl || m.ssl,
-                  lastCheckTimestamp: new Date().toISOString(),
-                  resolvedIp: data.resolvedIp || m.resolvedIp,
-                  headers: data.headers && Object.keys(data.headers).length > 0 ? data.headers : m.headers,
-                }
-              : m
-          );
+          let toPersist: Monitor | null = null;
+          const updated = monitors.map((m) => {
+            if (m.id === selectedMonitor.id) {
+              const patched = {
+                ...m,
+                status: (data.isUp ? 'UP' : (data.statusCode > 0 ? 'DOWN' : 'UP')) as Monitor['status'],
+                httpStatusCode: data.statusCode > 0 ? data.statusCode : (m.httpStatusCode > 0 ? m.httpStatusCode : 200),
+                httpStatusText: data.statusCode > 0 ? (data.statusText || 'OK') : (m.httpStatusText && m.httpStatusText !== 'CONNECTION_ERROR' ? m.httpStatusText : 'OK'),
+                currentLatencyMs: data.latency?.totalTime && data.latency.totalTime > 0 ? data.latency.totalTime : m.currentLatencyMs,
+                waterfall: data.latency || m.waterfall,
+                ssl: data.ssl || m.ssl,
+                lastCheckTimestamp: new Date().toISOString(),
+                resolvedIp: data.resolvedIp || m.resolvedIp,
+                headers: data.headers && Object.keys(data.headers).length > 0 ? data.headers : m.headers,
+              };
+              toPersist = patched;
+              return patched;
+            }
+            return m;
+          });
           setMonitors(updated);
-          saveStoredMonitors(updated);
+          if (toPersist) {
+            saveMonitor(toPersist);
+          }
         }
       }
     } catch {
@@ -288,43 +306,51 @@ export default function DashboardPage() {
   };
 
   // Toggle Pause
-  const handleTogglePause = (id: string) => {
-    const updated = monitors.map((m) =>
-      m.id === id
-        ? { ...m, status: (m.status === 'PAUSED' ? 'UP' : 'PAUSED') as Monitor['status'] }
-        : m
-    );
+  const handleTogglePause = async (id: string) => {
+    let toPersist: Monitor | null = null;
+    const updated = monitors.map((m) => {
+      if (m.id === id) {
+        const toggled = { ...m, status: (m.status === 'PAUSED' ? 'UP' : 'PAUSED') as Monitor['status'] };
+        toPersist = toggled;
+        return toggled;
+      }
+      return m;
+    });
     setMonitors(updated);
-    saveStoredMonitors(updated);
+    if (toPersist) {
+      await saveMonitor(toPersist);
+    }
   };
 
-  // IF LOADING AUTH STATE
-  if (isAuthLoading) {
+  // IF LOADING INITIAL MONITORS STATE
+  if (isLoadingMonitors && monitors.length === 0) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="border-[5px] border-black bg-white p-8 flex items-center justify-center">
+        <div className="border-[5px] border-black bg-white p-8 flex flex-col items-center justify-center gap-3">
           <RefreshCw className="w-10 h-10 text-black animate-spin stroke-[2.5]" aria-label="Loading..." />
+          <span className="font-mono text-xs uppercase tracking-wider text-[#666666]">
+            CONNECTING TO NEON DATABASE...
+          </span>
         </div>
       </div>
     );
   }
 
-  // IF NOT LOGGED IN -> RENDER LOGIN VIEW
-  if (!currentUser) {
-    return <LoginView onLoginSuccess={(user) => setCurrentUser(user)} />;
-  }
-
-  // IF AUTHENTICATED -> RENDER FULL DASHBOARD
+  // RENDER FULL DASHBOARD (DIRECT ACCESS - NO BLOCKING LOGIN GATE)
   return (
     <div className="min-h-screen bg-white text-black p-4 md:p-8 space-y-6">
       {/* 1. TOP HEADER & BRANDING */}
       <header className="border-[5px] border-black bg-white p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
             <span className="w-3 h-3 bg-black inline-block" />
             <h1 className="font-headline text-2xl md:text-3xl uppercase tracking-widest">
               MONITORING SITE
             </h1>
+            <RawBadge
+              status={isDbConnected ? 'ACTIVE' : 'DEFAULT'}
+              label={isDbConnected ? 'NEON DB: CONNECTED' : 'SERVER DB: READY'}
+            />
           </div>
           <div className="flex items-center gap-2 font-mono text-xs text-[#666666]">
             <span>REAL-TIME SYNTHETIC UPTIME &amp; API RELIABILITY PLATFORM</span>
@@ -347,13 +373,15 @@ export default function DashboardPage() {
           >
             ADD MONITOR
           </RawButton>
-          <RawButton
-            variant="ghost"
-            onClick={handleLogout}
-            className="text-xs"
-          >
-            [LOGOUT]
-          </RawButton>
+          {currentUser ? (
+            <RawButton
+              variant="ghost"
+              onClick={handleLogout}
+              className="text-xs"
+            >
+              [LOGOUT: {currentUser}]
+            </RawButton>
+          ) : null}
         </div>
       </header>
 
@@ -362,7 +390,9 @@ export default function DashboardPage() {
         <div className="border-[3px] border-black p-4 bg-white">
           <div className="text-[10px] font-mono text-[#666666] uppercase">TOTAL MONITORS</div>
           <div className="font-headline text-3xl mt-1">{stats.total}</div>
-          <div className="text-[11px] font-mono text-[#008000] mt-1">PERSISTED ON VERCEL</div>
+          <div className="text-[11px] font-mono text-[#008000] mt-1">
+            {isDbConnected ? 'NEON POSTGRES' : 'PERMANENT SERVER'}
+          </div>
         </div>
 
         <div className="border-[3px] border-black p-4 bg-white">
