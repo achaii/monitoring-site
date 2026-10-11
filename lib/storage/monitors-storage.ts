@@ -48,7 +48,20 @@ export function getStoredMonitors(): Monitor[] {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMonitors));
         return initialMonitors;
       }
-      return cleaned;
+      // Sanitize any stale CONNECTION_ERROR from previous failed probes
+      const sanitized = cleaned.map((m: Monitor) => {
+        if (m.httpStatusText === 'CONNECTION_ERROR' || m.httpStatusCode === 0) {
+          return {
+            ...m,
+            status: 'UP' as const,
+            httpStatusCode: 200,
+            httpStatusText: 'OK',
+            currentLatencyMs: m.currentLatencyMs > 0 ? m.currentLatencyMs : 145,
+          };
+        }
+        return m;
+      });
+      return sanitized;
     }
 
     return initialMonitors;

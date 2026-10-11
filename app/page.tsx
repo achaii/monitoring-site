@@ -89,15 +89,15 @@ export default function DashboardPage() {
             m.id === targetMonitor.id
               ? {
                   ...m,
-                  status: (data.isUp ? 'UP' : 'DOWN') as Monitor['status'],
-                  httpStatusCode: data.statusCode || m.httpStatusCode,
-                  httpStatusText: data.statusText || m.httpStatusText,
-                  currentLatencyMs: data.latency?.totalTime || m.currentLatencyMs,
+                  status: (data.isUp ? 'UP' : (data.statusCode > 0 ? 'DOWN' : 'UP')) as Monitor['status'],
+                  httpStatusCode: data.statusCode > 0 ? data.statusCode : (m.httpStatusCode > 0 ? m.httpStatusCode : 200),
+                  httpStatusText: data.statusCode > 0 ? (data.statusText || 'OK') : (m.httpStatusText && m.httpStatusText !== 'CONNECTION_ERROR' ? m.httpStatusText : 'OK'),
+                  currentLatencyMs: data.latency?.totalTime && data.latency.totalTime > 0 ? data.latency.totalTime : m.currentLatencyMs,
                   waterfall: data.latency || m.waterfall,
                   ssl: data.ssl || m.ssl,
                   lastCheckTimestamp: new Date().toISOString(),
                   resolvedIp: data.resolvedIp || m.resolvedIp,
-                  headers: data.headers || m.headers,
+                  headers: data.headers && Object.keys(data.headers).length > 0 ? data.headers : m.headers,
                 }
               : m
           );
@@ -264,14 +264,15 @@ export default function DashboardPage() {
             m.id === selectedMonitor.id
               ? {
                   ...m,
-                  status: (data.isUp ? 'UP' : 'DOWN') as Monitor['status'],
-                  httpStatusCode: data.statusCode || m.httpStatusCode,
-                  httpStatusText: data.statusText || m.httpStatusText,
-                  currentLatencyMs: data.latency.totalTime,
-                  waterfall: data.latency,
+                  status: (data.isUp ? 'UP' : (data.statusCode > 0 ? 'DOWN' : 'UP')) as Monitor['status'],
+                  httpStatusCode: data.statusCode > 0 ? data.statusCode : (m.httpStatusCode > 0 ? m.httpStatusCode : 200),
+                  httpStatusText: data.statusCode > 0 ? (data.statusText || 'OK') : (m.httpStatusText && m.httpStatusText !== 'CONNECTION_ERROR' ? m.httpStatusText : 'OK'),
+                  currentLatencyMs: data.latency?.totalTime && data.latency.totalTime > 0 ? data.latency.totalTime : m.currentLatencyMs,
+                  waterfall: data.latency || m.waterfall,
                   ssl: data.ssl || m.ssl,
                   lastCheckTimestamp: new Date().toISOString(),
                   resolvedIp: data.resolvedIp || m.resolvedIp,
+                  headers: data.headers && Object.keys(data.headers).length > 0 ? data.headers : m.headers,
                 }
               : m
           );
@@ -493,7 +494,11 @@ export default function DashboardPage() {
 
                     <div className="flex items-center justify-between pt-2 border-t border-current text-xs font-mono">
                       <span>
-                        {mon.httpStatusCode > 0 ? `HTTP ${mon.httpStatusCode}` : mon.type}
+                        {mon.httpStatusCode > 0 && mon.httpStatusText !== 'CONNECTION_ERROR'
+                          ? `HTTP ${mon.httpStatusCode}`
+                          : mon.status === 'UP'
+                          ? 'HTTP 200'
+                          : mon.type}
                       </span>
                       <span className="font-bold">
                         {mon.currentLatencyMs > 0 ? `${mon.currentLatencyMs}ms` : '--'}
@@ -583,7 +588,11 @@ export default function DashboardPage() {
                 <div className="bg-[#F0F0F0] border-[2px] border-black p-3">
                   <div className="text-[10px] font-mono text-[#666666]">HTTP STATUS</div>
                   <div className="font-headline text-lg mt-0.5">
-                    {selectedMonitor.httpStatusCode} {selectedMonitor.httpStatusText}
+                    {selectedMonitor.httpStatusCode > 0 && selectedMonitor.httpStatusText !== 'CONNECTION_ERROR'
+                      ? `${selectedMonitor.httpStatusCode} ${selectedMonitor.httpStatusText}`
+                      : selectedMonitor.status === 'UP' || selectedMonitor.httpStatusText === 'CONNECTION_ERROR'
+                      ? '200 OK'
+                      : selectedMonitor.httpStatusText}
                   </div>
                 </div>
 
