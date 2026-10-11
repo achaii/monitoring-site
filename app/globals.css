@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  --font-archivo: 'Archivo Black', sans-serif;
+  --font-work: 'Work Sans', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-blue: #0000ff;
+  --color-success: #008000;
+  --color-warning: #ffa500;
+  --color-error: #ff0000;
+  --color-sunken: #f0f0f0;
+  --color-sunken-hover: #e8e8e8;
+  --color-disabled-border: #cccccc;
+}
+
+/* RawBlock Golden Rule 1: Zero border radius everywhere */
+*, *::before, *::after {
+  border-radius: 0px !important;
+  box-shadow: none !important;
+}
+
+/* RawBlock Typography Helpers */
+.font-headline {
+  font-family: var(--font-archivo), sans-serif;
+}
+
+.font-body {
+  font-family: var(--font-work), sans-serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), monospace;
+}
+
+/* Border Hierarchy */
+.border-thin {
+  border: 1px solid #000000;
+}
+
+.border-thick {
+  border: 3px solid #000000;
+}
+
+.border-heavy {
+  border: 5px solid #000000;
+}
+
+/* RawBlock Link Style */
+a {
+  color: var(--color-blue);
+  text-decoration: underline;
+}
+a:hover {
+  background-color: #000000;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+/* Custom Scrollbar RawBlock */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #ffffff;
+  border-left: 2px solid #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #333333;
+}
